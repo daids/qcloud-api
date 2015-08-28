@@ -18,7 +18,7 @@ class QcloudApiServicePorvider extends ServiceProvider
     public function boot()
     {
 		$this->publishes([
-			__DIR__.'/../config/qcloud.php'  => config_path('qcloud.php'),
+			__DIR__.'/config/qcloud.php'  => config_path('qcloud.php'),
 		]);
 	}
 
