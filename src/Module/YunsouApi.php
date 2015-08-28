@@ -63,8 +63,39 @@ class YunsouApi
 		return ['result' => false, 'message' => '访问远程未成功！'];
 	}
 
-	public function search($keyword)
+	public function search($keyword, $page, $perPage)
 	{
+		$params = [
+			'Action' => 'DataSearch',
+			'Nonce' => rand(),
+			'Region' => 'sh',
+			'SecretId' => $this->secretId,
+			'Timestamp' => time(),
+			'appId' => $this->appId,
+			'search_query' => $keyword,
+			'page_id' => $page,
+			'num_per_page' => $perPage
+		];
 
+		$params['Signature'] = $this->getSign($params);
+
+		$url = 'https://yunsou.api.qcloud.com/v2/index.php?'.http_build_query($params);
+
+		$httpClient = new Client();
+
+		try {
+			$response = $httpClient->get($url);
+		} catch (Exception $e) {
+			return ['result' => false, 'message' => '访问远程出错！'];
+		}
+		if ($response->getStatusCode() == 200) {
+			$result = json_decode($response->getBody(), true);
+			if (isset($result['code']) && !$result['code']) {
+				return ['result' => true, 'data' => $result['data']];
+			}
+			return ['result' => false, 'message' => '添加失败！'];
+		}
+		return ['result' => false, 'message' => '访问远程未成功！'];
+		
 	}
 }
