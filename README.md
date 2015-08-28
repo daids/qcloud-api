@@ -42,8 +42,8 @@ $data = [
 ```php
 //返回结果
 $result = [
-		'result' => true, 
-	'data' =>
+	'result' => true, 
+	'data' => [
 		"cost_time": 19,
 		"display_num": 2,
 		"echo": "",
