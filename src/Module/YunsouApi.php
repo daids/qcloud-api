@@ -22,7 +22,7 @@ class YunsouApi
 		$plainText = '';
 		ksort($params);
 		foreach ($params as $key => $value) {
-			$plainText .= $key.'='.str_replace('_', '.', $value).'&';
+			$plainText .= str_replace('_', '.', $key).'='.str_replace('_', '.', $value).'&';
 		}
 		$plainText = 'GETyunsou.api.qcloud.com/v2/index.php?'.rtrim($plainText, '&');
         return base64_encode(hash_hmac('SHA1', $plainText, $this->secretKey, true));
@@ -44,25 +44,27 @@ class YunsouApi
 		}
 		$params['Signature'] = $this->getSign($params);
 
-		$url = 'yunsou.api.qcloud.com/v2/index.php?'.http_build_query($params);
+		$url = 'https://yunsou.api.qcloud.com/v2/index.php?'.http_build_query($params);
 
 		$httpClient = new Client();
 
 		try {
 			$response = $httpClient->get($url);
 		} catch (Exception $e) {
-			return false;
+			return ['result' => false, 'message' => '访问远程出错！'];
 		}
 		if ($response->getStatusCode() == 200) {
 			$result = json_decode($response->getBody(), true);
 			if (isset($result['code']) && !$result['code']) {
-				return true;
+				return ['result' => true];
 			}
+			return ['result' => false, 'message' => '添加失败！'];
 		}
-		return false;
+		return ['result' => false, 'message' => '访问远程未成功！'];
 	}
 
 	public function search($keyword)
 	{
 
 	}
+}
