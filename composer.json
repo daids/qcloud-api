@@ -1,0 +1,16 @@
+{
+    "name": "daids/qcloud-api",
+    "description": "qcloud api for laravel5",
+    "type": "lib",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "daidongsheng",
+            "email": "daids@mail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "guzzlehttp/guzzle": "~6.0"
+    }
+}
