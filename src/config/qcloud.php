@@ -1,13 +1,15 @@
-<?php 
+<?php
 
 return [
-	
-	'base' => [
-		'appId' => '',
-		'secretId' => '',
-		'secretKey' => '',
-	],
-	'yunsou' => [
-		'appId' => ''
-	]
+    'base' => [
+        'appId' => '',
+        'secretId' => '',
+        'secretKey' => '',
+    ],
+    'yunsou' => [
+        'appId' => ''
+    ],
+    'cos' => [
+        'appId' => ''
+    ]
 ];
