@@ -10,12 +10,14 @@ class CosApi
     private $secretId;
     private $secretKey;
     private $server = 'http://web.file.myqcloud.com/files/v1/';
+    private $httpClient;
 
     public function __construct(Repository $config)
     {
         $this->appId = array_get($config, 'qcloud.appId', '');
         $this->secretId = array_get($config, 'qcloud.secretId', '');
         $this->secretKey = array_get($config, 'qcloud.secretKey', '');
+        $this->httpClient = new Client(['timeout' => 30]);
     }
 
     public function getSign($bucketName, $expired = 0, $fileId = null)
@@ -38,30 +40,23 @@ class CosApi
         return $this->server.$this->appId.'/'.$bucketName.'/'.$dstPath;
     }
 
-    public function upload($srcPath, $bucketName, $dstPath, $bizAttr = null)
+    public function upload($srcPath, $bucketName, $dstPath)
     {
         $srcPath = realpath($srcPath);
-        $dstPath = $this->urlEncode($dstPath);
         if (! file_exists($srcPath)) {
             return ['code' => 1, 'message' => '文件不存在'];
         }
         $expired = time() + 360;
+        $dstPath = $this->urlEncode($dstPath);
         $url = $this->generateResUrl($bucketName, $dstPath);
         $sign = $this->getSign($bucketName, $expired);
-        $sha1 = hash_file('sha1', $srcPath);
-
-        $httpClient = new Client(['timeout' => 30]);
 
         try {
-            $response = $httpClient->post($url, [
+            $response = $this->httpClient->post($url, [
                 'multipart' => [
                     [
                         'name'     => 'op',
                         'contents' => 'upload'
-                    ],
-                    [
-                        'name'     => 'sha',
-                        'contents' => $sha1
                     ],
                     [
                         'name'     => 'filecontent',
@@ -76,73 +71,51 @@ class CosApi
             return ['code' => 2, 'message' => '接口请求异常'];
         }
 
-        return json_decode($response->getBody(), true);
+        return json_decode((string)$response->getBody(), true);
     }
 
+    public function deleteFile($bucketName, $dstPath)
+    {
+        $dstPath = $this->urlEncode($dstPath);
+        $url = $this->generateResUrl($bucketName, $dstPath);
+        try {
+            $response = $this->httpClient->post($url, [
+                'body' => json_encode(['op' => 'delete'])
+            ]);
+        } catch (\Exception $e) {
+            return ['code' => 2, 'message' => '接口请求异常'];
+        }
 
-    // public function upload_impl($fileObj, $filetype, $bucket, $fileid, $userid, $magicContext, $params) {
-    //         $expired = time() + 60;
-    //         $url = self::generateResUrl($bucket, $userid, $fileid);
-    //         $sign = Auth::getAppSignV2($bucket, $fileid, $expired);
-    //         // add get params to url
-    //         if (isset($params['get']) && is_array($params['get'])) {
-    //             $queryStr = http_build_query($params['get']);
-    //             $url .= '?'.$queryStr;
-    //         }
-    //         $data = array();
-    //         if ($filetype == 0) {
-    //             $data['FileContent'] = '@'.$fileObj;
-    //         } else if ($filetype == 1) {
-    //             $data['FileContent'] = $fileObj;
-    //         }
-    //         if ($magicContext) {
-    //             $data['MagicContext'] = $magicContext;
-    //         }
-    //         $req = array(
-    //             'url' => $url,
-    //             'method' => 'post',
-    //             'timeout' => 10,
-    //             'data' => $data,
-    //             'header' => array(
-    //                 'Authorization:QCloud '.$sign,
-    //             ),
-    //         );
-    //         $rsp = Http::send($req);
-    //         $info = Http::info();
-    //         $ret = json_decode($rsp, true);
-    //         if ($ret) {
-    //             if (0 === $ret['code']) {
-    //                 $data = array(
-    //                     'url' => $ret['data']['url'],
-    //                     'downloadUrl' => $ret['data']['download_url'],
-    //                     'fileid' => $ret['data']['fileid'],
-    //                 );
-    //                 if (array_key_exists('is_fuzzy', $ret['data'])) {
-    //                     $data['isFuzzy'] = $ret['data']['is_fuzzy'];
-    //                 }
-    //                 if (array_key_exists('is_food', $ret['data'])) {
-    //                     $data['isFood'] = $ret['data']['is_food'];
-    //                 }
-    //                 return array('httpcode' => $info['http_code'], 'code' => $ret['code'], 'message' => $ret['message'], 'data' => $data);
-    //             } else {
-    //                 return array('httpcode' => $info['http_code'], 'code' => $ret['code'], 'message' => $ret['message'], 'data' => array());
-    //             }
-    //         } else {
-    //             return array('httpcode' => $info['http_code'], 'code' => self::IMAGE_NETWORK_ERROR, 'message' => 'network error', 'data' => array());
-    //         }
-    //     }
+        return json_decode((string)$response->getBody(), true);
+    }
 
-        // public function generateResUrl($bucket, $userid=0, $fileid='', $oper = '') {
-        //     if ($fileid) {
-        //         $fileid = urlencode($fileid);
-        //         if ($oper) {
-        //             return Conf::API_IMAGE_END_POINT_V2 . Conf::APPID . '/' . $bucket . '/' . $userid . '/' . $fileid . '/' . $oper;
-        //         } else {
-        //             return Conf::API_IMAGE_END_POINT_V2 . Conf::APPID . '/' . $bucket . '/' . $userid . '/' . $fileid;
-        //         }
-        //     } else {
-        //         return Conf::API_IMAGE_END_POINT_V2 . Conf::APPID . '/' . $bucket . '/' . $userid;
-        //     }
-        // }
+    public function createDir($bucketName, $dirName)
+    {
+        $dirName = $this->urlEncode($dirName);
+        $url = $this->generateResUrl($bucketName, $dirName);
+        try {
+            $response = $this->httpClient->post($url, [
+                'body' => json_encode(['op' => 'create'])
+            ]);
+        } catch (\Exception $e) {
+            return ['code' => 2, 'message' => '接口请求异常'];
+        }
 
+        return json_decode((string)$response->getBody(), true);
+    }
+
+    public function deleteDir($bucketName, $dirName)
+    {
+        $dirName = $this->urlEncode($dirName);
+        $url = $this->generateResUrl($bucketName, $dirName);
+        try {
+            $response = $this->httpClient->post($url, [
+                'body' => json_encode(['op' => 'delete'])
+            ]);
+        } catch (\Exception $e) {
+            return ['code' => 2, 'message' => '接口请求异常'];
+        }
+
+        return json_decode((string)$response->getBody(), true);
+    }
 }
